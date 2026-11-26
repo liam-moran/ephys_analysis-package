@@ -1,0 +1,34 @@
+# 09_ephys_cell-overview configuration (descriptive figure; no statistics, no PCA / LDA).
+cell_summary: 08_ephys_cell-summary/output/cell_summary.csv
+figure_formats: [png, svg]
+clip_sd: 2.5                     # heatmap colour scale clipped at +- 2.5 SD
+log_features: [base_firing_rate_Hz]   # log10(x + 0.01) before z-scoring (skewed)
+
+# Features shown, in this order, grouped by area. column = 08 cell_summary column.
+features:
+  - {column: mt_Cm_pF, label: "Cm (pF)", area: Passive}
+  - {column: step_rin_MOhm, label: "Rin, steps (MΩ)", area: Passive}
+  - {column: base_vm_baseline_mV, label: "Vm baseline (mV)", area: Passive}
+  - {column: step_sag_ratio, label: "Sag ratio", area: Passive}
+  - {column: base_firing_rate_Hz, label: "Spontaneous rate (Hz)", area: Spontaneous}
+  - {column: base_isi_cv, label: "ISI CV", area: Spontaneous}
+  - {column: ramp_ap_threshold_mV, label: "AP threshold (mV)", area: AP at ramp rheobase}
+  - {column: ramp_ap_half_width_ms, label: "AP half-width (ms)", area: AP at ramp rheobase}
+  - {column: ramp_ap_amplitude_mV, label: "AP amplitude (mV)", area: AP at ramp rheobase}
+  - {column: ramp_ap_upstroke_mV_ms, label: "AP upstroke (mV/ms)", area: AP at ramp rheobase}
+  - {column: ramp_ap_ahp_mV, label: "AHP (mV)", area: AP at ramp rheobase}
+  - {column: ramp_rheobase_pA, label: "Rheobase, ramp (pA)", area: Excitability}
+  - {column: step_fi_slope_Hz_per_pA, label: "F-I slope (Hz/pA)", area: Excitability}
+  - {column: step_max_rate_step_Hz, label: "Max step rate (Hz)", area: Excitability}
+  - {column: ramp_n_rebound_spikes_short, label: "Rebound spikes, ramp (5 s)", area: Rebound}
+  - {column: ramp_rebound_peak_mV, label: "Rebound peak, ramp (mV)", area: Rebound}
+  - {column: step_rebound_peak_mV, label: "Rebound peak, steps (mV)", area: Rebound}
+  # drug columns are per condition (08: tc_<condition>_...); add one pair per drug, e.g. tc_SP_...
+  - {column: tc_5HT_delta_drug_vm_baseline_mV, label: "5-HT: ΔVm drug period (mV)", area: Drug}
+  - {column: tc_5HT_drug_min_delta_vm_mV, label: "5-HT: lowest ΔVm (mV)", area: Drug}
+
+# Intrinsic labels used for colours / markers (from the 08 cell summary)
+labels:
+  firing_class: base_firing_class            # silent / tonic
+  block_if_not_missing: step_first_step_with_block_pA
+  rebound_if_positive: ramp_n_rebound_spikes_short

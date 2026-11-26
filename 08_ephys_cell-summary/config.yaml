@@ -1,0 +1,54 @@
+# 08_ephys_cell-summary configuration: one row per cell from the final values of 03-07.
+# Paths are relative to the repository root.
+cells_table: 01_ephys_meta-org/output/cells.csv
+
+# Cell metadata copied from the recording book (context only; never used to filter or group here)
+cell_metadata_columns: [Animal ID, Slice, Date Recorded, Sex, Age, Strain, Animals.Genotype]
+
+# Per protocol: the output table, a column prefix, the columns kept, and flags that make a
+# recording a second choice (it is used only if no unflagged recording of that protocol exists).
+protocols:
+  membrane_test:
+    table: 03_ephys_membrane-test/output/membrane_test_values.csv
+    prefix: mt
+    columns: [Rt_MOhm, Ra_MOhm, Rm_MOhm, Cm_pF, tau_fast_ms, Ra_clampex_MOhm, qc_status]
+    exclude_if_flag: []
+  baseline:
+    table: 04_ephys_baseline/output/baseline_features.csv
+    prefix: base
+    columns: [firing_class, n_spikes, firing_rate_Hz, isi_cv, vm_baseline_mV, ap_threshold_mV, ap_half_width_ms,
+              ap_amplitude_mV, ap_upstroke_mV_ms, ap_ahp_mV, flags]
+    exclude_if_flag: [abf_tags_present, bias_current]   # e.g. a 'baseline' recorded after a drug washout
+  steps:
+    table: 05_ephys_steps/output/step_features.csv
+    prefix: step
+    columns: [vm_pre_mV, rin_MOhm, first_spiking_step_pA, fi_slope_Hz_per_pA, max_rate_step_Hz, first_step_with_block_pA,
+              sag_ratio, rebound_peak_mV, n_rebound_spikes_short, latency_first_rebound_spike_ms, adaptation_index,
+              ap_threshold_mV, ap_half_width_ms, ap_amplitude_mV, ap_upstroke_mV_ms, ap_ahp_mV, bias_current_pA, flags]
+    exclude_if_flag: []
+  ramp:
+    table: 06_ephys_ramp/output/ramp_features.csv
+    prefix: ramp
+    columns: [rheobase_pA, n_sweeps_rheobase, ap_threshold_mV, ap_peak_mV, ap_amplitude_mV, ap_half_width_ms,
+              ap_upstroke_mV_ms, ap_downstroke_mV_ms, ap_upstroke_downstroke_ratio, ap_ahp_mV, n_sweeps_ap,
+              I_first_spike_pA, v_threshold_first_mV, n_spikes_up, n_spikes_down, max_inst_rate_up_Hz, hysteresis_pA,
+              rin_ramp_MOhm, rebound_peak_mV, n_rebound_spikes_short, latency_first_rebound_spike_ms, flags]
+    exclude_if_flag: []
+  timecourse:
+    table: 07_ephys_timecourse/output/timecourse_summary.csv   # one row per drug application
+    prefix: tc
+    split_by: condition          # one column set per drug condition: tc_5HT_*, tc_SP_*, tc_5HT_Ba2_* (layered)
+    order_by: application        # several applications of one condition in a recording: the first is used
+    columns: [application, layered, baseline_reference, drug_tag_text, baseline_vm_baseline_mV,
+              delta_drug_vm_baseline_mV, delta_drug_firing_rate_Hz, drug_min_delta_vm_mV, drug_min_time_s,
+              drug_peak_delta_vm_mV, drug_peak_time_s, drug_peak_direction,
+              delta_washout_vm_baseline_mV, delta_drug_vs_pre_tag_vm_baseline_mV, baseline_drift_mV_per_min,
+              bias_current_pA, flags]
+    exclude_if_flag: []
+
+# Force a recording for a cell and protocol (abf file name), e.g.:
+# overrides:
+#   20261026_7503_B:
+#     membrane_test: 20261026_7503_B_0008.abf
+#     "timecourse:5-HT": 20261026_7503_B_0004.abf     # drug conditions: 'timecourse:<condition>'
+overrides: {}

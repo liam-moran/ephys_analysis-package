@@ -1,0 +1,119 @@
+# 01_ephys_meta-org configuration.
+# Relative paths are relative to the repository root.
+
+paths:
+  # Searched recursively for *.abf (read-only): put each recording day in its own folder under data/.
+  abf_root: data
+  # The recording book (read-only). Change the filename when you use a new book.
+  recording_book: data/Recording_Book_PMv-modulation_example.xlsx
+
+recording_book:
+  key_column: Recording Name           # column with the ABF file name (without .abf)
+  columns:                             # names of the other book columns the pipeline reads
+    cell_tag: Cell Tag                 # identifies the cell (never taken from file names)
+    animal: Animal ID                  # links to the Animals sheet (and, with slice, to Slices)
+    slice: Slice
+    date: Date Recorded                # compared with the ABF date
+    protocol: Protocol                 # the label compared with the protocol found in the ABF
+  sheets:                              # role: sheet name
+    recording_log: Recording Log
+    slices: Slices
+    animals: Animals
+  error_values: ["#REF!", "#N/A", "#VALUE!", "#DIV/0!", "#NAME?"]
+
+# --------------------------------------------------------------------------- anomalies
+# Flags only; files are fixed in 02_ephys_anomaly-fix.
+anomalies:
+  # Current clamp, no current channel, two voltage channels this correlated -> duplicated voltage.
+  duplicate_min_correlation: 0.90
+  # Primary current-clamp voltage outside these limits -> possible gain error (e.g. ~20x).
+  voltage_median_range_mV: [-120, 20]
+  voltage_max_span_mV: 300             # 1st-99th percentile span
+  typical_rmp_mV: -60                  # only used to report an approximate scaling factor
+  min_sample_rate_Hz: 5000
+
+# --------------------------------------------------------------------------- noise (spectral QC)
+# src/ephys_analysis/noise.py. Measured on quiet stretches (command at holding, spikes removed).
+# Units: mV in current clamp, pA in voltage clamp. Above 'info' a flag is noted; above 'review'
+# it needs a decision in 02 (accept, remove_mains, notch <Hz>, exclude).
+figure_formats: [png, svg]           # spectrum figure per recording: output/noise_spectra/
+noise:
+  mains_Hz: 50                       # mains frequency (Europe 50 Hz)
+  n_harmonics: 5                     # 50, 100, 150, 200, 250 Hz
+  segment_s: 10                      # Welch segment: 0.1 Hz resolution
+  min_segment_s: 1.0
+  guard_cc_s: 0.3                    # skip after a command change (current clamp)
+  guard_vc_s: 0.02                   # (voltage clamp: capacitive transient)
+  spike_exclude_ms: [5, 200]         # current clamp: spikes removed 5 ms before to 200 ms after
+  rms_band_Hz: [1, 1000]
+  lowf_band_Hz: [0.05, 20]           # perfusion / pump range
+  lowf_min_prominence_dB: 10
+  lowf_max_width_Hz: 0.5             # pump = narrow line; broad bumps are physiology
+  lowf_min_quiet_fraction: 0.9       # low-f only in recordings without current injection
+  artefact_k: 8                      # brief transients: > 8 robust SD ...
+  artefact_min_amp: {mV: 2.0, pA: 20.0}   # ... and at least this large ...
+  artefact_max_ms: 1.0               # ... lasting at most 1 ms
+  artefact_window_ms: 5
+  info:
+    mains_pp: {mV: 0.2, pA: 2.0}     # peak-to-peak, all harmonics together
+    lowf_pp: {mV: 0.2, pA: 2.0}
+  review:
+    mains_pp: {mV: 1.0, pA: 10.0}
+    lowf_pp: {mV: 1.0, pA: 10.0}
+    rms: {mV: 3.0, pA: 20.0}
+    artefacts_per_min: 6
+
+# --------------------------------------------------------------------------- expected setup
+# What the recordings should look like. Deviations are flagged.
+expected:
+  amplifier: MultiClamp 700B
+  # Command sensitivity stored in the ABF header (telegraphed from the amplifier).
+  cc_command_sensitivity_pA_per_V: 400
+  vc_command_sensitivity_mV_per_V: 20
+  # MultiClamp telegraph clamp mode codes.
+  telegraph_modes: {0: voltage_clamp, 1: current_clamp, 2: current_clamp}
+  # Protocols without current manipulation: must run at 0 pA.
+  baseline_families: [spontaneous, modulation_timecourse]
+  # Recording-book comments that may mention current set on the amplifier (not visible in the ABF).
+  book_comment_columns: [Protocol Comments, Cell Health & Problems]
+  current_comment:
+    value_regex: '([+-]?\s?\d+(?:\.\d+)?)\s*pA'
+    keywords: [inject, holding, bias, hyperpolaris, hyperpolariz, depolaris, depolariz]
+
+# --------------------------------------------------------------------------- classification
+# The ABF decides the family; the recording-book label only sets the status:
+#   confirmed (agree) | probable (no label) | mismatch (disagree) | ambiguous | unsupported
+classification:
+  primary_adc_index: 0                 # its unit gives the clamp mode: pA -> VC, mV -> CC
+  rules:
+    flat_command_tolerance: {voltage_mV: 0.5, current_pA: 1.0}
+    membrane_test: {max_pulse_duration_s: 0.2, max_abs_pulse_amplitude_mV: 20.0, max_sweep_length_s: 10.0}
+    epsc: {min_duration_s: 30.0}                       # VC, all voltage commands flat
+    current_steps: {min_sweeps: 3, require_varying_amplitude: true}
+    ramp: {}                                           # CC, ramp epochs or ramp-like command
+    modulation_timecourse:                             # CC, flat command, long
+      min_duration_s: 600.0
+      tag_keywords: ["hit bath", "bath", "drug", "wash", "5ht", "applied", "application"]
+    spontaneous: {min_duration_s: 10.0}                # CC, flat command
+
+families:
+  membrane_test:
+    label_patterns: ["membrane[_ ]?test", "^A0_", "^M1_"]
+    sort_folder: 05_membrane_test_A0_M1
+  spontaneous:
+    label_patterns: ["^A1_", "^M2_", "spontaneous"]
+    sort_folder: 01_spontaneous_A1_M2
+  current_steps:
+    label_patterns: ["^A3_CC", "^M3_", "FI_Steps", "CC_Steps"]
+    sort_folder: 02_current_steps_FI_A3_M3
+  ramp:
+    label_patterns: ["^A4_", "^M4_", "ramp", "pyramid"]
+    sort_folder: 03_ramp_A4_M4
+  modulation_timecourse:
+    label_patterns: ["^A5_", "^M6_", "timecourse"]
+    sort_folder: 04_modulation_timecourse_A5_M6
+  epsc:                                # catalogued and copied only (separate miniML workflow)
+    label_patterns: ["epsc"]
+    sort_folder: 06_EPSC_separate_analysis
+
+review_folder: 99_review_unclassified_or_conflicting

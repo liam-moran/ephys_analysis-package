@@ -1,0 +1,32 @@
+# 03_ephys_membrane-test configuration.
+# Input: the analysis-ready recordings from 02_ephys_anomaly-fix (relative to the repository root).
+# Only recordings whose issues are resolved are listed there.
+recordings_table: 02_ephys_anomaly-fix/output/analysis_ready.csv
+family: membrane_test
+
+# Clampex Membrane Test algorithm (pCLAMP 10 User Guide, pp. 163-166). See README.md.
+membrane_test:
+  command_dac: auto            # auto = DAC whose edges evoke the largest current response
+  current_adc: auto            # auto = first ADC with current units
+  steady_state_fraction: 0.20  # last 20 % of each segment (Clampex)
+  fit_upper_fraction: 0.80     # exponential fit from 80 % ...
+  fit_lower_fraction: 0.10     # ... to 10 % of the transient peak (Clampex default)
+  edges: both                  # onset and offset transients
+  min_fit_points: 5
+  # PROVISIONAL (open decision): transients are two-exponential, so single-exponential
+  # R^2 is ~0.75-0.95 on good recordings.
+  min_fit_r_squared: 0.70
+  min_transient_snr: 20.0      # no-access recordings have SNR 5-9; whole-cell 60-190
+  report_biexponential: false  # diagnostic two-exponential fit (not saved in final values)
+  # Ra model (decided 2026-11-26): main Ra from the fast component of a two-exponential fit
+  # that models the amplifier's Bessel filter (telegraphed cutoff, 2 kHz here). Clampex
+  # single-exponential values are kept in *_clampex columns.
+  ra_model: fast               # fast | clampex
+  min_tau_fast_ms: 0.1         # faster fast component is not resolved by a 2 kHz filter -> Ra NaN, flagged
+  fit_pre_ms: 1.0              # baseline before each edge included in the fit
+  filter_upsample: 10          # filter model computed on a 10x finer time grid
+  plausible_ranges:            # warning flags only
+    Ra_MOhm: [1, 100]
+    Rt_MOhm: [50, 5000]
+    Cm_pF: [2, 200]
+    tau_ms: [0.02, 10]

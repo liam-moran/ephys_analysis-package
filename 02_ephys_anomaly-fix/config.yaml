@@ -1,0 +1,71 @@
+# 02_ephys_anomaly-fix configuration.
+# Relative paths are relative to the repository root.
+
+inputs:
+  recordings: 01_ephys_meta-org/output/recordings.csv
+  flags: 01_ephys_meta-org/output/flags.csv
+  meta_org_project: 01_ephys_meta-org        # its config provides families and expected setup
+
+# The decision sheet you fill in (Excel). Kept outside output/, never overwritten.
+decision_sheet: 02_ephys_anomaly-fix/decisions.xlsx
+# Your initials. On each run, rows with a decision but an empty decided_by / decided_on
+# get these initials and the run date. Anything you typed yourself is kept.
+decided_by: ""
+
+# --------------------------------------------------------------------------- automatic resolution
+# Only these two known acquisition problems are resolved automatically. Every
+# resolution is logged in output/issues_report.*; everything else needs a decision.
+auto_resolve:
+  duplicated_voltage_no_current:
+    # Protocols without current manipulation (0 pA): the current is not needed.
+    voltage_only_families: [spontaneous, modulation_timecourse]
+    # Protocols that inject current: use the command waveform, but only if the
+    # telegraphed command sensitivity is the expected one (no sensitivity flag).
+    command_as_current_families: [current_steps, ramp]
+  possible_gain_error:
+    # Rescale by the standard amplifier gain that brings the median voltage closest
+    # to a typical RMP. Automatic only if that gain is clearly the best choice.
+    standard_gains: [2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000]
+    typical_rmp_mV: -60
+    plausible_rmp_mV: [-100, -20]
+    min_margin_mV: 10          # best gain must be this much closer to typical RMP than the next
+
+# --------------------------------------------------------------------------- decisions
+# Allowed actions (decision column) and what they do:
+#   accept                 keep as is; the flag does not affect analysis
+#   exclude                not used in analysis (stays catalogued); a note is required
+#   relabel <family>       use this protocol family instead
+#   bias_current <pA>      record a current set on the amplifier (not visible in the ABF)
+#   rescale <factor>       divide the voltage by this gain factor
+#   voltage_only           no current available or needed
+#   command_as_current     use the command waveform as the injected current
+#   remove_mains [n]       subtract fitted mains sinusoids (50 Hz + n harmonics; empty = default) in 04-07
+#   notch <Hz; Hz>         narrow zero-phase notch at these frequencies (e.g. a stable pump frequency) in 04-07
+families: [spontaneous, current_steps, ramp, modulation_timecourse, membrane_test, epsc]
+
+# Per flag: suggested action and the actions allowed for it. Flags not listed: accept / exclude.
+actions:
+  protocol_mismatch:          {suggest: relabel, allowed: [relabel, accept, exclude]}
+  protocol_ambiguous:         {suggest: relabel, allowed: [relabel, exclude]}
+  protocol_unsupported:       {suggest: exclude, allowed: [relabel, exclude]}
+  book_mentions_current:      {suggest: bias_current, allowed: [bias_current, accept, exclude]}
+  baseline_not_zero_current:  {suggest: bias_current, allowed: [bias_current, accept, exclude]}
+  duplicated_voltage_no_current: {suggest: command_as_current, allowed: [command_as_current, voltage_only, exclude]}
+  possible_gain_error:        {suggest: rescale, allowed: [rescale, accept, exclude]}
+  unexpected_command_sensitivity: {suggest: accept, allowed: [accept, exclude]}
+  telegraph_off:              {suggest: accept, allowed: [accept, exclude]}
+  telegraph_mode_mismatch:    {suggest: accept, allowed: [accept, relabel, exclude]}
+  unreadable_file:            {suggest: exclude, allowed: [exclude]}
+  # noise (01 spectral QC). Corrections are applied in memory by 04-07 (current clamp), never to the ABF.
+  mains_noise:                {suggest: accept, allowed: [accept, remove_mains, notch, exclude]}
+  periodic_low_frequency_noise: {suggest: accept, allowed: [accept, notch, exclude]}
+  high_rms_noise:             {suggest: accept, allowed: [accept, exclude]}
+  transient_artefacts:        {suggest: accept, allowed: [accept, exclude]}
+  noise_check_failed:         {suggest: accept, allowed: [accept, exclude]}
+
+# Settings of the noise corrections (copied into analysis_ready.csv, so every analysis applies the same)
+noise_corrections:
+  mains_Hz: 50
+  mains_harmonics: 5          # remove_mains without a value: 50, 100, 150, 200, 250 Hz
+  mains_window_s: 1.0         # sinusoids re-fitted every 1 s (follows slow phase / amplitude drift)
+  notch_Q: 30                 # notch quality factor: bandwidth = f / Q (50 Hz -> 1.7 Hz wide)

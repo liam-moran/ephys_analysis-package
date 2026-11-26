@@ -1,0 +1,36 @@
+# 05_ephys_steps configuration.
+# Input: the analysis-ready recordings from 02_ephys_anomaly-fix (relative to the repository root).
+recordings_table: 02_ephys_anomaly-fix/output/analysis_ready.csv
+families: [current_steps]        # A3 / M3 current-step recordings
+figure_formats: [png, svg]       # one detection figure per recording, before the feature tables
+
+# Windows and definitions (src/ephys_analysis/steps.py).
+# Decided 2026-11-26: Allen-style sag (minimum over the whole step), rebound spikes within 5 s,
+# Allen adaptation index (NaN below 4 spikes), attenuated events reported apart from spikes.
+steps:
+  pre_window_s: 0.5              # vm_pre: median of the 0.5 s before the step (spikes removed)
+  sag_window_s: null             # v_min: minimum over the whole step (Allen); a number = first N s only
+  steady_state_s: 0.1            # v_ss: median of the last 100 ms of the step
+  rebound_peak_window_s: 0.5     # rebound peak: max V in the first 500 ms after the step
+  rebound_spike_window_s: 5.0    # 'short' rebound spike count: first 5 s after the step
+  exclude_before_ms: 5           # spikes removed from Vm medians: 5 ms before ...
+  exclude_after_ms: 50           # ... to 50 ms after threshold
+  min_spikes_adaptation: 4       # adaptation index (Allen definition) needs >= 4 spikes
+  min_intervals_for_cv: 3        # ISI CV during the step needs >= 3 intervals
+  burst_max_isi_s: 0.1           # bursts (MaxInterval, as in the earlier step-analysis notebook)
+  burst_min_spikes: 2
+  burst_min_ibi_s: 0.2
+  command_tol_pA: 1.0            # command changes smaller than this are not edges
+  attenuated_prominence_mV: 20.0 # peaks this prominent that are not spikes = attenuated events (depolarisation block)
+
+# Spike detection: identical to 04_ephys_baseline (keep the two in sync)
+spikes:
+  dvdt_cutoff: 20.0
+  min_peak_mV: -20.0
+  min_height_mV: 20.0
+  max_threshold_to_peak_ms: 5.0
+  threshold_fraction: 0.05
+  threshold_search_ms: 5.0
+  ahp_window_ms: 50.0
+  min_valid_upstroke: 50.0
+  max_valid_half_width_ms: 5.0

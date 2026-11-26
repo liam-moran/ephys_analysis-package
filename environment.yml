@@ -1,0 +1,26 @@
+# Reproducible Conda environment for the PMvDAT+ intrinsic electrophysiology package.
+# Create:   conda env create -f environment.yml
+# Update:   conda env update -n jaap_ephys -f environment.yml --prune
+# Then:     conda activate jaap_ephys
+#           python -m pip install -e .
+#           python -m ipykernel install --user --name jaap_ephys --display-name "Python (jaap_ephys)"
+#
+# Versions are the ones verified in the existing jaap_ephys environment on 2026-11-24.
+name: jaap_ephys
+channels:
+  - conda-forge
+dependencies:
+  - python=3.13
+  - numpy=2.5
+  - scipy=1.18
+  - pandas=3.1
+  - matplotlib=3.11
+  - seaborn
+  - openpyxl
+  - pyyaml=6.0
+  - jupyterlab
+  - ipykernel
+  - pytest
+  - pip
+  - pip:
+      - pyabf==2.3.8

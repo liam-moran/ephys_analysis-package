@@ -1,0 +1,27 @@
+# 04_ephys_baseline configuration.
+# Input: the analysis-ready recordings from 02_ephys_anomaly-fix (relative to the repository root).
+recordings_table: 02_ephys_anomaly-fix/output/analysis_ready.csv
+families: [spontaneous]          # A1 / M2 baseline recordings (0 pA)
+figure_formats: [png, svg]       # one detection figure per recording, before the feature table
+
+# Analysis window and features (src/ephys_analysis/baseline.py)
+baseline:
+  window_s: 100                  # the LAST 100 s of each recording
+  min_window_s: 60               # shorter recordings are analysed but flagged
+  silent_max_spikes: 10          # silent if <= this many spikes in the window (10 in 100 s = 0.1 Hz)
+  min_intervals_for_cv: 5        # ISI CV only with >= 5 intervals (6 spikes)
+  exclude_before_ms: 5           # Vm: remove each spike from 5 ms before threshold ...
+  exclude_after_ms: 50           # ... to 50 ms after threshold (covers the AHP trough)
+  isolated_min_isi_s: 0.5        # AP waveform: only spikes >= 0.5 s after the previous one
+
+# Spike detection and waveform (src/ephys_analysis/spikes.py; adapted from Allen IPFX)
+spikes:
+  dvdt_cutoff: 20.0              # mV/ms, detection (Allen default)
+  min_peak_mV: -20.0             # mV, absolute peak
+  min_height_mV: 20.0            # mV, threshold to peak
+  max_threshold_to_peak_ms: 5.0  # ms (Allen default)
+  threshold_fraction: 0.05       # threshold where dV/dt = 5 % of the spike's own max upstroke
+  threshold_search_ms: 5.0       # ms searched back from the upstroke
+  ahp_window_ms: 50.0            # ms after the peak to find the AHP trough
+  min_valid_upstroke: 50.0       # mV/ms; slower = 'slow_upstroke' (failing spike), waveform not used
+  max_valid_half_width_ms: 5.0   # ms; wider = 'broad', waveform not used

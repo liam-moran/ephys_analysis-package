@@ -1,0 +1,72 @@
+# 10_ephys_figures configuration: publication-style figures (descriptive) and PROVISIONAL paired
+# drug statistics. Paths are relative to the repository root.
+inputs:
+  cell_summary: 08_ephys_cell-summary/output/cell_summary.csv
+  selection: 08_ephys_cell-summary/output/selection.csv
+  analysis_ready: 02_ephys_anomaly-fix/output/analysis_ready.csv      # ABF paths for the example traces
+  step_sweeps: 05_ephys_steps/output/step_sweeps.csv
+  ap_waveforms: 06_ephys_ramp/output/ap_waveforms.csv
+  timecourse_summary: 07_ephys_timecourse/output/timecourse_summary.csv
+  timecourse_bins: 07_ephys_timecourse/output/timecourse_bins.csv
+figure_formats: [png, svg]       # SVG text stays editable (Illustrator / Inkscape)
+
+# Study settings used in figure titles and notes
+cell_type_label: PMvDAT+                 # e.g. "PMvDAT+ cells" in titles
+liquid_junction_potential_mV: 15.9       # not corrected; stated in every figure with absolute voltages
+ljp_solution: "K-gluconate, 35 °C"       # internal solution / temperature of the LJP value
+
+# Intrinsic labels (as in 09)
+labels:
+  firing_class: base_firing_class
+  block_if_not_missing: step_first_step_with_block_pA
+  rebound_if_positive: ramp_n_rebound_spikes_short
+
+# Example traces (fig1): a cell tag, or auto (first silent / first tonic cell; steps and ramp from the silent example)
+examples: {silent: auto, tonic: auto, steps: auto, ramp: auto}
+example_spontaneous_s: 30        # last 30 s of the spontaneous recording
+
+# fig3 and the summary table: column of the 08 cell summary, label, unit, log axis
+properties:
+  - {column: base_vm_baseline_mV, label: "Vm at rest (mV)", unit: mV}
+  - {column: mt_Cm_pF, label: "Cm (pF)", unit: pF}
+  - {column: step_rin_MOhm, label: "Rin, steps (MΩ)", unit: MΩ}
+  - {column: ramp_rin_ramp_MOhm, label: "Rin, ramp (MΩ)", unit: MΩ}
+  - {column: step_sag_ratio, label: "Sag ratio", unit: ""}
+  - {column: base_firing_rate_Hz, label: "Spontaneous rate (Hz)", unit: Hz, log: true}
+  - {column: base_isi_cv, label: "ISI CV", unit: ""}
+  - {column: ramp_rheobase_pA, label: "Rheobase, ramp (pA)", unit: pA}
+  - {column: step_fi_slope_Hz_per_pA, label: "F–I slope (Hz/pA)", unit: Hz/pA}
+  - {column: step_max_rate_step_Hz, label: "Max step rate (Hz)", unit: Hz}
+  - {column: ramp_n_rebound_spikes_short, label: "Rebound spikes, ramp", unit: count}
+  - {column: ramp_hysteresis_pA, label: "Ramp hysteresis (pA)", unit: pA}
+
+# fig4 and the summary table: AP at ramp rheobase (06, mean over the quiet ramp sweeps)
+ap_properties:
+  - {column: ramp_ap_threshold_mV, label: "Threshold (mV)", unit: mV}
+  - {column: ramp_ap_amplitude_mV, label: "Amplitude (mV)", unit: mV}
+  - {column: ramp_ap_half_width_ms, label: "Half-width (ms)", unit: ms}
+  - {column: ramp_ap_upstroke_mV_ms, label: "Upstroke (mV/ms)", unit: mV/ms}
+  - {column: ramp_ap_downstroke_mV_ms, label: "Downstroke (mV/ms)", unit: mV/ms}
+  - {column: ramp_ap_ahp_mV, label: "AHP (mV)", unit: mV}
+
+# fig6: drug period shading (s after the tag; as 07: 60 s after the tag, 200 s long)
+drug_window_s: [60, 260]
+
+# PROVISIONAL paired drug statistics (src/ephys_analysis/drug_stats.py). Set before looking at the
+# results; review before reporting (README: "Drug statistics: what and why").
+drug_stats:
+  primary: vm_baseline_mV                    # drug vs baseline (layered: vs pre-tag)
+  secondary: [firing_rate_Hz, isi_cv, ap_threshold_mV, ap_half_width_ms, ap_ahp_mV]   # Holm-corrected
+  alpha: 0.05
+  n_boot: 10000                              # bootstrap resamples for the 95 % CIs
+  ci_method: BCa                             # bias-corrected and accelerated bootstrap CI (as DABEST); or percentile
+  effect_size: mean_diff                     # headline effect in fig6: mean_diff / median_diff / hedges_g
+  estimation_secondary: true                 # fig7: estimation plot per secondary outcome (exploratory)
+  seed: 0
+  min_cells: 5                               # fewer cells: no p-value
+  responder_sd_factor: 3.0                   # responder: |ΔVm| > 3 x baseline Vm SD ...
+  responder_max_drift_mV_per_min: 2.0        # ... and |baseline drift| < 2 mV/min
+  exclude_flags: [unstable_baseline]         # applications with these flags are left out (listed)
+  smooth_bins: 3                             # peak / sham excursion: running mean over 3 bins
+  condition_pairs: []                        # e.g. [["5-HT", "5-HT + Ba2+"]]: paired, same cells
+  animal_column: Animal ID                   # 08 cell-summary column identifying the animal (cells per animal)

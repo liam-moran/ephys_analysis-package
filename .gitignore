@@ -1,0 +1,34 @@
+# Python / tools
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ipynb_checkpoints/
+*.egg-info/
+build/
+dist/
+.vscode/
+.idea/
+
+# Secrets
+.env
+.env.*
+
+# Raw data and recording books: never commit
+*.abf
+*.xlsx
+*.xls
+*.xlsm
+
+# Everything a subproject produces (incl. protocol-sorted copies)
+*/output/
+
+# OS / temporary
+*.tmp
+*.bak
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local helpers
+notebooks/legacy/

@@ -1,0 +1,54 @@
+# 07_ephys_timecourse configuration.
+# Input: the analysis-ready recordings from 02_ephys_anomaly-fix (relative to the repository root).
+recordings_table: 02_ephys_anomaly-fix/output/analysis_ready.csv
+book_table: 01_ephys_meta-org/output/recordings.csv   # recording-book drug columns and comments (context only)
+families: [modulation_timecourse]  # A5 / M6 drug timecourse recordings
+figure_formats: [png, svg]         # one detection figure per recording, before the feature tables
+
+# Periods, tags and timecourse (src/ephys_analysis/timecourse.py)
+timecourse:
+  period_s: 100                  # baseline and washout periods: 100 s (same as the 04 baseline window)
+  drug_start_after_tag_s: 60     # drug period starts 60 s after the drug tag ...
+  drug_period_s: 200             # ... and lasts 200 s (decided 2026-11-26)
+  min_period_s: 60               # shorter periods are analysed but flagged
+  bin_s: 10                      # timecourse bins (s)
+  peak_smooth_bins: 3            # lowest / highest Vm during the drug: running mean over 3 bins (30 s)
+  max_baseline_drift_mV_per_min: 2.0  # flag a baseline period whose Vm drifts faster than this
+  # Tag classification (case-insensitive substrings), in time order. Every drug tag starts an
+  # application; a drug tag before the washout of the previous one is LAYERED (cumulative
+  # condition, measured against the initial baseline). No keyword at all: drug, washout, drug, ... by order (flagged).
+  drug_keywords: [hit bath, in bath, bath, drug, application, applied, wash in, wash-in]
+  washout_keywords: [washout, wash out, wash-out]
+  # Compound names read from the tag text (aliases, case-insensitive, whole words). Add new compounds here.
+  # If a tag names none of them, the recording book (Drug 1, Drug 2, ...) is used, else "unknown" (flagged).
+  drug_names:
+    5-HT: [5-ht, 5ht, serotonin]
+    SP: [substance p, sp]
+    TTX: [ttx]
+    Ba2+: [ba2+, barium, ba]
+    TQ: [tertiapin q, tertiapin, tq]
+    NAD 299: [nad 299, nad299, nad-299]
+  # Recording-book columns (01 output): drug columns 'Drug 1', 'Drug 2', ... and context columns
+  book_drug_prefix: "Drug "
+  book_context_columns: [Drug Effects, Protocol Comments]
+
+# Per-period features: the 04 baseline definitions (Vm with spikes removed, rate, ISI CV, AP waveform)
+baseline:
+  silent_max_spikes: 10          # per 100 s, as in 04; scaled to each period's length (20 for the 200 s drug period)
+  window_s: 100                  # reference length for silent_max_spikes
+  min_intervals_for_cv: 5
+  exclude_before_ms: 5
+  exclude_after_ms: 50
+  isolated_min_isi_s: 0.5
+
+# Spike detection: identical to 04-06 (keep in sync)
+spikes:
+  dvdt_cutoff: 20.0
+  min_peak_mV: -20.0
+  min_height_mV: 20.0
+  max_threshold_to_peak_ms: 5.0
+  threshold_fraction: 0.05
+  threshold_search_ms: 5.0
+  ahp_window_ms: 50.0
+  min_valid_upstroke: 50.0
+  max_valid_half_width_ms: 5.0
